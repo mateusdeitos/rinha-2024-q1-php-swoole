@@ -1,0 +1,10 @@
+{
+	"autoload": {
+        "psr-4": {
+            "App\\": "src/"
+        }
+    },
+    "require-dev": {
+        "openswoole/ide-helper": "~4.11.6"
+    }
+}
