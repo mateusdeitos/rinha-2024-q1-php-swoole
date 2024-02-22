@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Database\Db;
 use App\DTO\ExtratoDTO;
+use App\DTO\TransacaoDTO;
 
 class ExtratoService {
 
@@ -19,6 +20,17 @@ class ExtratoService {
 		$statement->bindParam(":cliente_id", $clienteId, \PDO::PARAM_INT);
 		$statement->execute();
 
-		return $statement->fetchObject(ExtratoDTO::class);
+		$extrato = $statement->fetchObject(ExtratoDTO::class);
+		
+		$statement = $this->db->getConnection()->prepare("SELECT id, cliente_id, valor, descricao, tipo, realizada_em FROM transacoes WHERE cliente_id = :cliente_id ORDER BY id DESC");
+
+		$statement->bindParam(":cliente_id", $clienteId, \PDO::PARAM_INT);
+		$statement->execute();
+
+		while ($transacao = $statement->fetchObject(TransacaoDTO::class)) {
+			$extrato->addTransacao($transacao);
+		}
+
+		return $extrato;
 	}
 }
