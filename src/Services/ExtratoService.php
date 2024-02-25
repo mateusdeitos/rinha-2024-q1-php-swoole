@@ -2,35 +2,48 @@
 
 namespace App\Services;
 
-use App\Database\Db;
+use App\Database\Pool;
 use App\DTO\ExtratoDTO;
 use App\DTO\TransacaoDTO;
+use PDO;
+use Swoole\Database\PDOProxy;
 
 class ExtratoService {
 
-	private Db $db;
+	public function __construct(private Pool $pool) {}
 
-	public function __construct(Db $db) {
-		$this->db = $db;
-	}
-
-	public function getExtrato(int $clienteId): ExtratoDTO|null {
-		$statement = $this->db->getConnection()->prepare("SELECT saldo, limite FROM clientes WHERE id = :cliente_id");
-
-		$statement->bindParam(":cliente_id", $clienteId, \PDO::PARAM_INT);
-		$statement->execute();
-
-		$extrato = $statement->fetchObject(ExtratoDTO::class);
-		
-		$statement = $this->db->getConnection()->prepare("SELECT id, cliente_id, valor, descricao, tipo, realizada_em FROM transacoes WHERE cliente_id = :cliente_id ORDER BY id DESC");
-
-		$statement->bindParam(":cliente_id", $clienteId, \PDO::PARAM_INT);
-		$statement->execute();
-
-		while ($transacao = $statement->fetchObject(TransacaoDTO::class)) {
-			$extrato->addTransacao($transacao);
-		}
-
-		return $extrato;
+	public function getExtrato(int $clienteId, bool $withTransacoes = true): ExtratoDTO|null {
+		return $this->pool->runCallback(function (PDOProxy|PDO $connection) use ($clienteId, $withTransacoes) {
+			$statement = $connection->prepare("SELECT saldo, limite FROM clientes WHERE id = :cliente_id");
+	
+			$statement->bindParam(":cliente_id", $clienteId, \PDO::PARAM_INT);
+			$statement->execute();
+	
+			/**
+			 * @var ExtratoDTO
+			 */
+			$extrato = $statement->fetchObject(ExtratoDTO::class);
+	
+			if (!$withTransacoes) {
+				return $extrato;
+			}
+			
+			$statement = $connection->prepare((
+				"SELECT id, cliente_id, valor, descricao, tipo, realizada_em 
+				   FROM transacoes 
+				 WHERE cliente_id = :cliente_id 
+				 ORDER BY id DESC 
+				 LIMIT 10"
+			));
+	
+			$statement->bindParam(":cliente_id", $clienteId, \PDO::PARAM_INT);
+			$statement->execute();
+	
+			while ($transacao = $statement->fetchObject()) {
+				$extrato->addTransacao(TransacaoDTO::fromObject($transacao));
+			}
+	
+			return $extrato;
+		});
 	}
 }

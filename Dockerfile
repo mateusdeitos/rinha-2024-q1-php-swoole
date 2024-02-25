@@ -1,9 +1,9 @@
-FROM openswoole/swoole:latest-alpine
+FROM phpswoole/swoole:php8.3-alpine
 
 # Install Composer
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
-RUN apk add --no-cache \
+RUN apk add --no-cache postgresql-dev \
     && docker-php-ext-install pdo_pgsql
 
 # Set working directory

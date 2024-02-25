@@ -4,7 +4,7 @@
             "App\\": "src/"
         }
     },
-    "require-dev": {
-        "openswoole/ide-helper": "~4.11.6"
-    }
+	"require-dev": {
+		"swoole/ide-helper": "~5.0.0"
+	}
 }

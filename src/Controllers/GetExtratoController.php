@@ -2,7 +2,7 @@
 
 namespace App\Controllers;
 
-use App\Database\Db;
+use App\Database\Pool;
 use App\Services\ExtratoService;
 use Swoole\Http\Request;
 use Swoole\Http\Response;
@@ -20,12 +20,13 @@ class GetExtratoController {
 		$this->clienteId = intval($matches[1]);
 	}
 
-	public function run() {
-		$extratoService = new ExtratoService(new Db());
+	public function run(Pool $pool) {
+		$extratoService = new ExtratoService($pool);
 
 		$extrato = $extratoService->getExtrato($this->clienteId);
 		if (!$extrato) {
 			$this->response->status(404);
+			$this->response->end();
 			return;
 		}
 
