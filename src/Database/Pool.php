@@ -12,7 +12,6 @@ class Pool {
 				"DB_DRIVER",
 				"DB_HOSTNAME",
 				"DB_PORT",	
-				"DB_INITIAL_POOL_SIZE",
 				"DB_MAX_POOL_SIZE",
 				"DB_PASSWORD",
 				"DB_USER",
@@ -44,9 +43,6 @@ class Pool {
 				(int) $envMap["DB_MAX_POOL_SIZE"],
 			);
 
-			if (intval($envMap["DB_INITIAL_POOL_SIZE"]) > 0) {
-				self::$pool->fill((int) $envMap["DB_INITIAL_POOL_SIZE"]);
-			}
 		}
 
 		return self::$pool;

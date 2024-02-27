@@ -20,6 +20,7 @@ $server->on("start", function (Server $server) {
 
 $server->on("request", function (Request $request, Response $response) {
 	$pool = new Pool();
+	$response->setHeader("Content-Type", "application/json");
 	try {
 		match (true) {
 			GetExtratoController::match($request->server["request_uri"]) => (new GetExtratoController($request, $response))->run($pool),
@@ -27,10 +28,10 @@ $server->on("request", function (Request $request, Response $response) {
 			default => $response->status(404)
 		};
 	
-		$response->isWritable() && $response->end();
+		$response->end();
 	} catch (\Throwable $th) {
 		$response->status($th->getCode());
-		$response->end();
+		$response->end(json_encode(["message" => $th->getMessage()]));
 	} 
 
 });

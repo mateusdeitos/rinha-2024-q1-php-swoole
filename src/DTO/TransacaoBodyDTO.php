@@ -18,7 +18,7 @@ class TransacaoBodyDTO {
 	}
 
 	public function getValor(): int {
-		return $this->valor * ($this->tipo === TipoTransacaoEnum::DEBITO ? -1 : 1);
+		return abs($this->valor);
 	}
 
 	public function getDescricao(): string {

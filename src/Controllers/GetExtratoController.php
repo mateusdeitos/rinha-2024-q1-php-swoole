@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use App\Database\Pool;
 use App\Services\ExtratoService;
+use DateTime;
 use Swoole\Http\Request;
 use Swoole\Http\Response;
 
@@ -25,13 +26,17 @@ class GetExtratoController {
 
 		$extrato = $extratoService->getExtrato($this->clienteId);
 		if (!$extrato) {
-			$this->response->status(404);
-			$this->response->end();
-			return;
+			throw new \Exception("Cliente não encontrado", 404);
 		}
 
-		$this->response->header("Content-Type", "application/json");
-		$this->response->end(json_encode($extrato));
+        $this->response->write(json_encode([
+			"saldo" => [
+				"total" => $extrato->saldo,
+				"data_extrato" => (new DateTime())->format(DateTime::ATOM),
+				"limite" => $extrato->limite,
+			],
+			"ultimas_transacoes" => $extrato->ultimas_transacoes
+		]));
 	}
 
 	public static function match(string $uri, &$matches = []): bool {

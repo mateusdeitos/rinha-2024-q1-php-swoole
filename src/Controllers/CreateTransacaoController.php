@@ -7,6 +7,7 @@ use App\DTO\TransacaoBodyDTO;
 use App\Enum\TipoTransacaoEnum;
 use App\Services\ExtratoService;
 use App\Services\TransacaoService;
+use DateTime;
 use Swoole\Http\Request;
 use Swoole\Http\Response;
 
@@ -29,56 +30,53 @@ class CreateTransacaoController
         $extratoService = new ExtratoService($pool);
 
         if (!$transacaoDTO = $this->getBody()) {
-            return;
+            throw new \Exception("Corpo da requisição inválido", 422);
         }
 
-        try {
-            $transacaoService->createTransacao($transacaoDTO);
-            $extrato = $extratoService->getExtrato($this->clienteId, false);
-            if (!$extrato) {
-                $this->response->status(404);
-                $this->response->end();
-                return;
-            }
-
-            $extrato->setIgnoreTransacoes(true);
-            $extrato->setIgnoreDataExtrato(true);
-
-            $this->response->status(200);
-            $this->response->header("Content-Type", "application/json");
-            $this->response->end(json_encode($extrato));
-        } catch (\Exception $e) {
-            $this->response->status($e->getCode());
-            $this->response->end($e->getMessage());
+        $extrato = $extratoService->getExtrato($this->clienteId, false);
+        if (!$extrato) {
+			throw new \Exception("Cliente não encontrado", 404);
         }
+
+		$extrato = $transacaoService->createTransacao($transacaoDTO);
+		if (!$extrato) {
+			throw new \Exception("Erro ao criar transação", 422);
+		}
+
+        $this->response->status(200);
+        $this->response->write(json_encode([
+			"saldo" => $extrato->saldo,
+			"limite" => $extrato->limite,
+		]));
     }
 
     private function getBody(): TransacaoBodyDTO|false
     {
         $body = json_decode($this->request->rawContent(), true);
         if (!is_array($body)) {
-            $this->response->status(400);
-            $this->response->end("Corpo da requisição inválido");
-            return false;
+            throw new \Exception("Corpo da requisição inválido", 422);
         }
 
-        if ($body["valor"] < 0) {
-            $this->response->status(400);
-            $this->response->end("valor inválido");
-            return false;
+        if (!is_int($body["valor"])) {
+            throw new \Exception("valor inválido", 422);
         }
 
         if (!TipoTransacaoEnum::tryFrom($body["tipo"])) {
-            $this->response->status(400);
-            $this->response->end("Tipo de transação inválido");
-            return false;
+            throw new \Exception("Tipo de transação inválido", 422);
         }
 
-        if (mb_strlen($body["descricao"]) > 10) {
-            $this->response->status(400);
-            $this->response->end("Descrição inválida");
-            return false;
+        if (!is_string($body["descricao"])) {
+            throw new \Exception("Descrição inválida", 422);
         }
+		
+		$descricao = preg_replace("/[^a-zA-Z0-9]/", "", $body["descricao"]);
+		if (!is_string($descricao)) {
+			throw new \Exception("Descrição inválida", 422);
+		}
+
+		if (strlen($descricao) > 10 || strlen($descricao) < 1) {
+			throw new \Exception("Descrição inválida", 422);
+		}
 
         return new TransacaoBodyDTO(
             $this->clienteId,

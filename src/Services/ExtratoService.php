@@ -12,36 +12,39 @@ class ExtratoService {
 
 	public function __construct(private Pool $pool) {}
 
-	public function getExtrato(int $clienteId, bool $withTransacoes = true): ExtratoDTO|null {
+	public function getExtrato(int $clienteId, bool $withTransacoes = true): object|null {
 		return $this->pool->runCallback(function (PDOProxy|PDO $connection) use ($clienteId, $withTransacoes) {
 			$statement = $connection->prepare("SELECT saldo, limite FROM clientes WHERE id = :cliente_id");
 	
 			$statement->bindParam(":cliente_id", $clienteId, \PDO::PARAM_INT);
 			$statement->execute();
 	
-			/**
-			 * @var ExtratoDTO
-			 */
-			$extrato = $statement->fetchObject(ExtratoDTO::class);
-	
+			$extrato = $statement->fetchObject();
+
+			if (!$extrato) {
+				return null;
+			}
+
 			if (!$withTransacoes) {
 				return $extrato;
 			}
 			
 			$statement = $connection->prepare((
-				"SELECT id, cliente_id, valor, descricao, tipo, realizada_em 
+				"SELECT *
 				   FROM transacoes 
 				 WHERE cliente_id = :cliente_id 
-				 ORDER BY id DESC 
+				 ORDER BY realizada_em DESC 
 				 LIMIT 10"
 			));
 	
 			$statement->bindParam(":cliente_id", $clienteId, \PDO::PARAM_INT);
 			$statement->execute();
-	
-			while ($transacao = $statement->fetchObject()) {
-				$extrato->addTransacao(TransacaoDTO::fromObject($transacao));
-			}
+
+			$extrato->ultimas_transacoes = $statement->fetchAll(\PDO::FETCH_OBJ);
+
+			// while ($transacao = $statement->fetchObject()) {
+			// 	$extrato->addTransacao(TransacaoDTO::fromObject($transacao));
+			// }
 	
 			return $extrato;
 		});
