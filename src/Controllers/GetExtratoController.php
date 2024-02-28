@@ -29,14 +29,7 @@ class GetExtratoController {
 			throw new \Exception("Cliente não encontrado", 404);
 		}
 
-        $this->response->write(json_encode([
-			"saldo" => [
-				"total" => $extrato->saldo,
-				"data_extrato" => (new DateTime())->format(DateTime::ATOM),
-				"limite" => $extrato->limite,
-			],
-			"ultimas_transacoes" => $extrato->ultimas_transacoes
-		]));
+        $this->response->write($extrato);
 	}
 
 	public static function match(string $uri, &$matches = []): bool {
