@@ -27,15 +27,9 @@ class CreateTransacaoController
     public function run(Pool $pool)
     {
         $transacaoService = new TransacaoService($pool);
-        $extratoService = new ExtratoService($pool);
 
         if (!$transacaoDTO = $this->getBody()) {
             throw new \Exception("Corpo da requisição inválido", 422);
-        }
-
-        $extrato = $extratoService->getExtrato($this->clienteId, false);
-        if (!$extrato) {
-			throw new \Exception("Cliente não encontrado", 404);
         }
 
 		$extrato = $transacaoService->createTransacao($transacaoDTO);
@@ -44,10 +38,7 @@ class CreateTransacaoController
 		}
 
         $this->response->status(200);
-        $this->response->write(json_encode([
-			"saldo" => $extrato->saldo,
-			"limite" => $extrato->limite,
-		]));
+        $this->response->write($extrato);
     }
 
     private function getBody(): TransacaoBodyDTO|false

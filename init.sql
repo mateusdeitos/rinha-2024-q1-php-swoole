@@ -35,8 +35,9 @@ $$;
 CREATE OR REPLACE FUNCTION debitar(
 	cliente_id_tx INT,
 	valor_tx INT,
-	descricao_tx VARCHAR(10))
-RETURNS RECORD
+  descricao_tx VARCHAR(10)
+)
+RETURNS jsonb
 LANGUAGE plpgsql
 AS $$
 DECLARE
@@ -59,35 +60,43 @@ RETURNING saldo, limite INTO _saldo, _limite;
 		INSERT INTO transacoes (cliente_id, valor, tipo, descricao)
 		VALUES (cliente_id_tx, valor_tx, 'd', descricao_tx);
 
-		SELECT success, _saldo, _limite INTO record;
-  ELSE 
-  	SELECT 0, saldo, limite
-      FROM clientes
-     WHERE id = cliente_id_tx
-      INTO record;
+    RETURN (
+      SELECT row_to_json(t) AS data
+      FROM (
+        SELECT _saldo as saldo, _limite as limite
+      ) t
+    );
+  ELSE
+    RETURN NULL;
 	END IF;
-  
-  RETURN record;
 END;
 $$;
 
 CREATE OR REPLACE FUNCTION creditar(
 	cliente_id_tx INT,
 	valor_tx INT,
-	descricao_tx VARCHAR(10))
-RETURNS TABLE (
-	novo_saldo INT,
-	_limite INT)
+  descricao_tx VARCHAR(10)
+)
+RETURNS jsonb
 LANGUAGE plpgsql
 AS $$
 BEGIN
 	INSERT INTO transacoes
-		VALUES(DEFAULT, cliente_id_tx, valor_tx, 'c', descricao_tx, NOW());
+    VALUES (DEFAULT, cliente_id_tx, valor_tx, 'c', descricao_tx, NOW());
 
-	RETURN QUERY
 		UPDATE clientes
 		SET saldo = saldo + valor_tx
+  WHERE id = cliente_id_tx;
+
+  RETURN (
+    SELECT row_to_json(t) AS data
+    FROM (
+      SELECT saldo, limite
+      FROM clientes
 		WHERE id = cliente_id_tx
-		RETURNING saldo, limite;
+    ) t
+  );
+END;
+$$;
 END;
 $$;

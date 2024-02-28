@@ -16,7 +16,7 @@ class TransacaoService
 {
     public function __construct(private Pool $pool) {}
 
-    public function createTransacao(TransacaoBodyDTO $transacaoBodyDTO): object|null
+    public function createTransacao(TransacaoBodyDTO $transacaoBodyDTO): string|null
     {
 		
 		return $this->pool->runCallback(function (PDOProxy|PDO $connection) use ($transacaoBodyDTO) {
@@ -36,15 +36,8 @@ class TransacaoService
 
 			$response = $statement->fetchObject();
 
-			
-			
-			$matches = [];
-			$pattern = $tipo === "c" ? "/\((.*),(.*)\)/" : "/\(\d,?(.*),(.*)\)/";
-			if (preg_match($pattern, $response->result, $matches)) {
-				$extrato = new stdClass();
-				$extrato->saldo = intval($matches[1]);
-				$extrato->limite = intval($matches[2]);
-				return $extrato;
+			if ($tipo === "c" || $response->result != "NULL") {
+				return $response->result;
 			}
 
 			return null;
